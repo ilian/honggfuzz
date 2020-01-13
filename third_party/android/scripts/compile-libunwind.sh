@@ -26,7 +26,7 @@ abort() {
 
 trap "abort 1" SIGINT SIGTERM
 
-if [ $# -ne 2 ]; then
+if [ $# -lt 2 ]; then
   echo "[-] Invalid arguments"
   echo "[!] $0 <LIBUNWIND_DIR> <ARCH>"
   echo "    ARCH: arm arm64 x86 x86_64"
@@ -117,10 +117,11 @@ fi
 # Support both Linux & Darwin
 HOST_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 HOST_ARCH=$(uname -m)
+HOST_PLATFORM=$HOST_OS-$HOST_ARCH
 
 
-export CC="$NDK"/toolchains/llvm/prebuilt/linux-x86_64/bin/"$ANDROID_NDK_COMPILER_PREFIX""$ANDROID_API_V"-clang
-export CXX="$NDK"/toolchains/llvm/prebuilt/linux-x86_64/bin/"$ANDROID_NDK_COMPILER_PREFIX""$ANDROID_API_V"-clang++
+export CC="$NDK"/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/"$TOOLCHAIN""$ANDROID_API_V"-clang
+export CXX="$NDK"/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/"$TOOLCHAIN""$ANDROID_API_V"-clang++
 
 if [ ! -x "$CC" ]; then
   echo "[-] clang doesn't exist: $CC"
@@ -142,7 +143,7 @@ else
   make clean
 fi
 
-./configure --host=$TOOLCHAIN --disable-coredump
+./configure --host=$TOOLCHAIN --disable-coredump "${@:3}"
 if [ $? -ne 0 ]; then
   echo "[-] configure failed"
   abort 1
