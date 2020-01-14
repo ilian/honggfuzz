@@ -132,7 +132,7 @@ else
   make clean
 fi
 
-./configure --host=$TOOLCHAIN --disable-coredump "${@:3}"
+./configure --host="$ANDROID_NDK_COMPILER_PREFIX" --disable-coredump "${@:3}"
 if [ $? -ne 0 ]; then
   echo "[-] configure failed"
   abort 1
