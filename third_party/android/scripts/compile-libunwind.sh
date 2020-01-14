@@ -26,10 +26,17 @@ abort() {
 
 trap "abort 1" SIGINT SIGTERM
 
-if [ $# -lt 2 ]; then
+if [ -z "$ANDROID_NDK_COMPILER_PREFIX" ]; then
+  NR_ARGS_REQ=2
+  ANDROID_NDK_COMPILER_PREFIX="$2"
+else
+  NR_ARGS_REQ=1
+fi
+
+if [ $# -lt $NR_ARGS_REQ ]; then
   echo "[-] Invalid arguments"
-  echo "[!] $0 <LIBUNWIND_DIR> <ARCH>"
-  echo "    ARCH: arm arm64 x86 x86_64"
+  echo "[!] $0 <LIBUNWIND_DIR> <ANDROID_NDK_COMPILER_PREFIX>"
+  echo "    ANDROID_NDK_COMPILER_PREFIX: required if ANDROID_NDK_COMPILER_PREFIX environment variable is not defined"
   exit 1
 fi
 
@@ -78,24 +85,6 @@ ANDROID_API_V=$(echo "$ANDROID_API" | grep -oE '[0-9]{1,2}$')
 
 LC_LDFLAGS="-static"
 
-ARCH="$2"
-
-# Prepare toolchain
-case "$ARCH" in
-  arm)
-    TOOLCHAIN=arm-linux-androideabi
-    ;;
-  arm64)
-    TOOLCHAIN=aarch64-linux-android
-    ;;
-  x86)
-    TOOLCHAIN=i686-linux-android
-    ;;
-  x86_64)
-    TOOLCHAIN=x86_64-linux-android
-    ;;
-esac
-
 # Apply patches required for Android
 # TODO: Automate global patching when all archs have been tested
 
@@ -120,8 +109,8 @@ HOST_ARCH=$(uname -m)
 HOST_PLATFORM=$HOST_OS-$HOST_ARCH
 
 
-export CC="$NDK"/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/"$TOOLCHAIN""$ANDROID_API_V"-clang
-export CXX="$NDK"/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/"$TOOLCHAIN""$ANDROID_API_V"-clang++
+export CC="$NDK"/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/"$ANDROID_NDK_COMPILER_PREFIX""$ANDROID_API_V"-clang
+export CXX="$NDK"/toolchains/llvm/prebuilt/$HOST_PLATFORM/bin/"$ANDROID_NDK_COMPILER_PREFIX""$ANDROID_API_V"-clang++
 
 if [ ! -x "$CC" ]; then
   echo "[-] clang doesn't exist: $CC"
@@ -154,18 +143,6 @@ if [ $? -ne 0 ]; then
     echo "[-] Compilation failed"
     cd - &>/dev/null
     abort 1
-fi
-
-# Naming conventions for arm64
-if [[ "$ARCH" == "arm64" ]]; then
-  cd "$ARCH"
-  find . -type f -name "*aarch64*.a" | while read -r libFile
-  do
-    fName=$(basename "$libFile")
-    newFName=$(echo "$fName" | sed "s#aarch64#arm64#")
-    ln -sf "$fName" "$newFName"
-  done
-  cd -
 fi
 
 abort 0
